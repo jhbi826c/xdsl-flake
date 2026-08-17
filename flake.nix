@@ -12,6 +12,13 @@
           pkgs = import nixpkgs { inherit system; };
           python = pkgs.python312.override {
             packageOverrides = pfinal: pprev: {
+              llvmlite = pprev.llvmlite.overridePythonAttrs (old: rec {
+                version = "0.47.0";
+                src = pkgs.fetchFromGitHub {
+                  owner = "numba"; repo = "llvmlite"; tag = "v${version}";
+                  hash = "sha256-YEIdIdbk19JHYtgL2gWjnAUYu13CH+7ikoyBUkOPpws=";
+                };
+              });
               xdsl = pfinal.buildPythonPackage rec {
                 pname = "xdsl"; version = xdslVersion; pyproject = true;
                 src = pkgs.fetchPypi {
@@ -24,6 +31,9 @@
                   pfinal.ordered-set
                   pfinal.typing-extensions
                 ];
+                optional-dependencies = {
+                  llvm = [ pfinal.llvmlite ];
+                };
                 doCheck = false;
                 pythonImportsCheck = [ "xdsl" ];
               };
@@ -32,7 +42,7 @@
           pythonEnv = python.withPackages (ps: with ps; [
             xdsl
             pytest
-          ]);
+          ] ++ ps.xdsl.optional-dependencies.llvm);
         in {
           inherit python pythonEnv;
           default = pythonEnv;
